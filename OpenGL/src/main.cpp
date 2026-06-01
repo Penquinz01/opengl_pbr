@@ -14,14 +14,12 @@
 
 
 float vertices[] = {
-	 0.5f,  0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	-0.5f,  0.5f, 0.0f,
-	-0.5f, -0.5f, 0.0f,
+	 0.0f,  0.5f, 0.0f,		1.0f, 0.0f, 0.0f,
+	 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,
+	-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,
 };
 unsigned int indices[] = {
 	0, 1, 2,
-	1, 2, 3
 };
 
 const char* vectexShaderSource = "shaders/vertx.vert";
@@ -109,14 +107,8 @@ int main() {
 	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 	SDL_Window* window;
-	SDL_Renderer* renderer;
 
-	SDL_CreateWindowAndRenderer(
-		"[glad] GL with SDL3",
-		WIDTH, HEIGHT,
-		SDL_WINDOW_OPENGL,
-		&window, &renderer
-	);
+	window = SDL_CreateWindow("[glad] GL with SDL3",WIDTH, HEIGHT,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE );
 
 	SDL_GLContext glContext =  SDL_GL_CreateContext(window);
 	if (!glContext) {
@@ -168,8 +160,10 @@ int main() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0,3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), static_cast<void*>(0));
+	glVertexAttribPointer(0,3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 
 	glUseProgram(shaderProgram);
 
@@ -191,14 +185,14 @@ int main() {
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6 ,GL_UNSIGNED_INT,0);
+		glDrawElements(GL_TRIANGLES, 3 ,GL_UNSIGNED_INT,0);
 
 		SDL_GL_SwapWindow(window);
 
 	}
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
-	SDL_DestroyRenderer(renderer);
+	SDL_GL_DestroyContext(glContext);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
