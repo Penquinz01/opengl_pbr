@@ -27,7 +27,8 @@ files {
 includedirs {
     "OpenGL/src",
     "vendor/glad/include",
-    "vendor/SDL3/include"
+    "vendor/SDL3/include",
+    "vendor/stbimage"
 }
 
 links {

@@ -7,6 +7,9 @@
 #include <sstream>
 #include <iostream>
 #include <filesystem>
+#include "Shader.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stbimage.h"
 #define get_current_dir _getcwd
 
 #define WIDTH 800
@@ -14,82 +17,24 @@
 
 
 float vertices[] = {
-	 0.0f,  0.5f, 0.0f,		1.0f, 0.0f, 0.0f,
-	 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,
-	-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,
+	 0.5f,  0.5f, 0.0f,		1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+	 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+	-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+  -0.5f,  0.5f, 0.0f,		1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 };
 unsigned int indices[] = {
 	0, 1, 2,
+	0, 2, 3,
+};
+
+float texCoords[] = {
+	0.5f, 1.0f,
+	1.0f, 0.0f,
+	0.0f, 0.0f,
 };
 
 const char* vectexShaderSource = "shaders/vertx.vert";
 const char* fragmentShaderSource = "shaders/fragment.frag";
-
-enum ShaderType {
-	VERTEX_SHADER,
-	FRAGMENT_SHADER,
-	PROGRAM
-};
-
-std::string readShaderSource(const char* filePath) {
-	std::ifstream shaderFile(filePath);
-	if (!shaderFile.is_open()) {
-		std::cerr << "Failed to open shader file: " << filePath << std::endl;
-		return "";
-	}
-	std::stringstream shaderStream;
-	shaderStream << shaderFile.rdbuf();
-	return shaderStream.str();
-}
-
-void GetShaderCompileErrors(unsigned int shader, ShaderType type) {
-	int success;
-	char infoLog[512];
-	switch (type) {
-	case VERTEX_SHADER:
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-		if (!success) {
-			glGetShaderInfoLog(shader, 512, NULL, infoLog);
-			std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
-		}
-		break;
-	case FRAGMENT_SHADER:
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-		if (!success) {
-			glGetShaderInfoLog(shader, 512, NULL, infoLog);
-			std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
-		}
-		break;
-	case PROGRAM:
-		glGetProgramiv(shader, GL_LINK_STATUS, &success);
-		if (!success) {
-			glGetProgramInfoLog(shader, 512, NULL, infoLog);
-			std::cerr << "Shader program linking failed: " << infoLog << std::endl;
-		}
-		break;
-
-	}
-}
-
-void SetShader(unsigned int& shader, std::string shaderSourceFile, ShaderType type) {
-	std::string shaderSource = readShaderSource(shaderSourceFile.c_str());
-	const char* string = shaderSource.c_str();
-	
-	switch (type) {
-		case VERTEX_SHADER:
-			shader = glCreateShader(GL_VERTEX_SHADER);
-			glShaderSource(shader, 1, &string, NULL);
-			glCompileShader(shader);
-			break;
-		case FRAGMENT_SHADER:
-			shader = glCreateShader(GL_FRAGMENT_SHADER);
-			glShaderSource(shader, 1, &string, NULL);
-			glCompileShader(shader);
-			break;
-	}
-	GetShaderCompileErrors(shader, type);
-}
-
 
 
 
@@ -132,18 +77,31 @@ int main() {
 	glViewport(0, 0, WIDTH, HEIGHT);
 
 
-	unsigned int vertexShader;
-	SetShader(vertexShader, vectexShaderSource, VERTEX_SHADER);
-	unsigned int fragmentShader;
-	SetShader(fragmentShader, fragmentShaderSource, FRAGMENT_SHADER);
+	Shader shaderProgram(vectexShaderSource, fragmentShaderSource);
 
-	unsigned int shaderProgram;
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
+	unsigned int texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
 
-	GetShaderCompileErrors(shaderProgram, PROGRAM);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	stbi_set_flip_vertically_on_load(true);
+  int width, height, nrChannels;
+	unsigned char* data = stbi_load("image.png",&width,&height,&nrChannels,0);
+
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else {
+    std::cerr << "Failed to load texture" << std::endl;
+	}
+  stbi_image_free(data);
+
+
 
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
@@ -160,13 +118,15 @@ int main() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0,3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+	glVertexAttribPointer(0,4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(4 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
 
-	glUseProgram(shaderProgram);
 
+	shaderProgram.use();
 	while (running) {
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_EVENT_QUIT) {
@@ -179,19 +139,20 @@ int main() {
 				}
 			}
 		}
-
+				
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT );
 
-		glUseProgram(shaderProgram);
+		shaderProgram.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+		shaderProgram.setTexture("ourTexture", 0);
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 3 ,GL_UNSIGNED_INT,0);
+		glDrawElements(GL_TRIANGLES, 6 ,GL_UNSIGNED_INT,0);
 
 		SDL_GL_SwapWindow(window);
 
 	}
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
 	SDL_GL_DestroyContext(glContext);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
