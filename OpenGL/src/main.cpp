@@ -19,6 +19,24 @@
 #define WIDTH 800
 #define HEIGHT 600
 
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+glm::vec3 direction;
+
+void ProcessInput(SDL_Event);
+void MouseMotion(SDL_Event);
+void ProcessCameraMovement();
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+float yaw = -90.0f;
+float pitch;
+
+float lastX = WIDTH / 2.0f;
+float lastY = HEIGHT / 2.0f;
 
 float vertices[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -94,7 +112,9 @@ int main() {
 
 	SDL_Window* window;
 
+
 	window = SDL_CreateWindow("[glad] GL with SDL3",WIDTH, HEIGHT,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE );
+	SDL_SetWindowRelativeMouseMode(window, true);
 
 	SDL_GLContext glContext =  SDL_GL_CreateContext(window);
 	if (!glContext) {
@@ -209,11 +229,21 @@ glm::vec3(-1.3f,
 -1.5f)
 	};
 
-	
+
+
+	glEnable(GL_DEPTH_TEST);
+
+	/*glm::mat4 view;
+	view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f));*/
 
 
 	shaderProgram.use();
 	while (running) {
+		float currentFrame = (float)SDL_GetTicks() / 1000.0f;
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_EVENT_QUIT) {
 				running = false;
@@ -224,14 +254,20 @@ glm::vec3(-1.3f,
 					running = false;
 				}
 			}
+			ProcessInput(event);
 		}
+		
 				
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT );
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     float time = (float)SDL_GetTicks() / 1000.0f;
     float angle = time * glm::radians(50.0f);
-
+		direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+		direction.y = sin(glm::radians(pitch));
+		direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    
+    ProcessCameraMovement();
 		shaderProgram.use();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -251,7 +287,12 @@ glm::vec3(-1.3f,
 			float angle = time * 20.0f * i;
 			model = glm::rotate(model, glm::radians(angle),
 				glm::vec3(1.0f, 0.3f, 0.5f));
+			const float radius = 10.0f;
+			float camX = sin(time) * radius;
+			float camZ = cos(time) * radius;
+			view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 			shaderProgram.setMat4("model", model);
+			shaderProgram.setMat4("view", view);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
@@ -262,4 +303,88 @@ glm::vec3(-1.3f,
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
+}
+
+enum Direction {
+	FORWARD = 0,
+	BACKWARD = 1,
+	LEFT = 2,
+	RIGHT = 3
+};
+
+int moveArray[4] = {0};
+
+void ProcessInput(SDL_Event event) {
+	
+
+	if (event.type == SDL_EVENT_KEY_DOWN) {
+		if (event.key.scancode == SDL_SCANCODE_W) {
+      moveArray[FORWARD] = 1;
+		}
+		if (event.key.scancode == SDL_SCANCODE_S) {
+      moveArray[BACKWARD] = 1;
+		}
+		if (event.key.scancode == SDL_SCANCODE_A) {
+      moveArray[LEFT] = 1;
+		}
+		if (event.key.scancode == SDL_SCANCODE_D) {
+      moveArray[RIGHT] = 1;
+    }
+	}
+	if(event.type == SDL_EVENT_KEY_UP) {
+		if (event.key.scancode == SDL_SCANCODE_W) {
+      moveArray[FORWARD] = 0;
+		}
+		if (event.key.scancode == SDL_SCANCODE_S) {
+      moveArray[BACKWARD] = 0;
+		}
+		if (event.key.scancode == SDL_SCANCODE_A) {
+      moveArray[LEFT] = 0;
+		}
+		if (event.key.scancode == SDL_SCANCODE_D) {
+      moveArray[RIGHT] = 0;
+    }
+	}
+
+	if (event.type == SDL_EVENT_MOUSE_MOTION) {
+    float xOffset = event.motion.x - lastX;
+    float yOffset = lastY - event.motion.y;
+    lastX = event.motion.x;
+    lastY = event.motion.y;
+
+		const float sensitivity = 1.0f;
+    xOffset *= sensitivity;
+		yOffset *= sensitivity;
+
+    yaw += xOffset;
+		pitch += yOffset;
+
+		if (pitch > 89.0f) {
+      pitch = 89.0f;
+		}
+		if (pitch < -89.0f) {
+      pitch = -89.0f;
+		}
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
+	}
+}
+
+void ProcessCameraMovement() {
+	const float cameraSpeed = 2.50f * deltaTime;
+	if (moveArray[FORWARD]) {
+		cameraPos += cameraSpeed * cameraFront;
+	}
+	if (moveArray[BACKWARD]) {
+		cameraPos -= cameraSpeed * cameraFront;
+	}
+	if (moveArray[LEFT]) {
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	}
+	if (moveArray[RIGHT]) {
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	}
 }
