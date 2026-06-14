@@ -24,13 +24,18 @@ glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 glm::vec3 direction;
+SDL_Window* window;
 
 void ProcessInput(SDL_Event);
 void MouseMotion(SDL_Event);
 void ProcessCameraMovement();
+void ProcessMouseWheel(SDL_Event);
+void ProcessMouseMotion(SDL_Event);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+bool mouseDisabled = true;
 
 float yaw = -90.0f;
 float pitch;
@@ -95,7 +100,7 @@ float texCoords[] = {
 const char* vectexShaderSource = "shaders/vertx.vert";
 const char* fragmentShaderSource = "shaders/fragment.frag";
 
-
+float fov = 45.0f;
 
 int main() {
 	std::cout << "Current working directory: "
@@ -110,7 +115,7 @@ int main() {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	SDL_Window* window;
+	
 
 
 	window = SDL_CreateWindow("[glad] GL with SDL3",WIDTH, HEIGHT,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE );
@@ -168,6 +173,9 @@ int main() {
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
+	unsigned int lightVAO;
+  glGenVertexArrays(1, &lightVAO);
+
 
 	unsigned int VBO;
 	glGenBuffers(1, &VBO);
@@ -181,8 +189,9 @@ int main() {
 
 	glVertexAttribPointer(0,3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	//glEnableVertexAttribArray(1);
+
 
 
 	glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
@@ -200,8 +209,7 @@ int main() {
 	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
 	glm::mat4 projection;
-	projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f,
-		100.0f);
+	
 	glm::vec3 cubePositions[] = {
 glm::vec3(0.0f,
 0.0f,
@@ -230,6 +238,8 @@ glm::vec3(-1.3f,
 	};
 
 
+  
+
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -256,7 +266,12 @@ glm::vec3(-1.3f,
 			}
 			ProcessInput(event);
 		}
-		
+		int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+		glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+		glm::vec3 toyColor(1.0f, 0.5f, 0.31f);
+		glm::vec3 result = lightColor * toyColor;
 				
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -268,10 +283,14 @@ glm::vec3(-1.3f,
 		direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     
     ProcessCameraMovement();
+		projection = glm::perspective(glm::radians(fov), 800.0f / 600.0f, 0.1f,
+			100.0f);
 		shaderProgram.use();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
 		shaderProgram.setTexture("ourTexture", 0);
+    shaderProgram.setVec3("lightColor", 1.0f, 0.6f, 0.2f);
+    shaderProgram.setVec3("objectColor", 1.0f, 0.3f, 1.0f);
 		int modelLoc = glGetUniformLocation(shaderProgram.ID, "model");
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		int viewLoc = glGetUniformLocation(shaderProgram.ID, "view");
@@ -344,33 +363,55 @@ void ProcessInput(SDL_Event event) {
 		if (event.key.scancode == SDL_SCANCODE_D) {
       moveArray[RIGHT] = 0;
     }
+		if (event.key.scancode == SDL_SCANCODE_B) {
+      mouseDisabled = !mouseDisabled;
+      SDL_SetWindowRelativeMouseMode(window,mouseDisabled);
+		}
 	}
 
 	if (event.type == SDL_EVENT_MOUSE_MOTION) {
-    float xOffset = event.motion.x - lastX;
-    float yOffset = lastY - event.motion.y;
-    lastX = event.motion.x;
-    lastY = event.motion.y;
-
-		const float sensitivity = 1.0f;
-    xOffset *= sensitivity;
-		yOffset *= sensitivity;
-
-    yaw += xOffset;
-		pitch += yOffset;
-
-		if (pitch > 89.0f) {
-      pitch = 89.0f;
-		}
-		if (pitch < -89.0f) {
-      pitch = -89.0f;
-		}
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(direction);
+    ProcessMouseMotion(event);
 	}
+	if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+		ProcessMouseWheel(event);
+	}
+
+	
+}
+void ProcessMouseWheel(SDL_Event event) {
+  fov -= event.wheel.y;
+	if (fov < 1.0f) {
+    fov = 1.0f;
+	}
+	if(fov > 45.0f) {
+    fov = 45.0f;
+	}
+}
+
+void ProcessMouseMotion(SDL_Event event) {
+	float xOffset = event.motion.x - lastX;
+	float yOffset = lastY - event.motion.y;
+	lastX = event.motion.x;
+	lastY = event.motion.y;
+
+	const float sensitivity = 0.50f;
+	xOffset *= sensitivity;
+	yOffset *= sensitivity;
+
+	yaw += xOffset;
+	pitch += yOffset;
+
+	if (pitch > 89.0f) {
+		pitch = 89.0f;
+	}
+	if (pitch < -89.0f) {
+		pitch = -89.0f;
+	}
+	glm::vec3 direction;
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(direction);
 }
 
 void ProcessCameraMovement() {
