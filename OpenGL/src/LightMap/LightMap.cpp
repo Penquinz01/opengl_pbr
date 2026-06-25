@@ -8,6 +8,7 @@
 #include "../Shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stbimage.h"
+#include "../File.h"
 
 SDL_Window* window;
 float deltaTime = 0.0f;
@@ -62,13 +63,14 @@ float vertices[] = {
 
 glm::vec3 positions[] = {
   glm::vec3(0.0f,0.0f,0.0f),
-  glm::vec3(1.0f,2.0f,3.0f),
+  glm::vec3(1.7f,2.5f,3.0f),
   glm::vec3(5.0f,3.0f,3.0f)
 };
 
 float GetTime() {
   return (float)SDL_GetTicks() / 1000.0f;
 }
+
 
 void ligthMapStart() {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -107,43 +109,13 @@ void ligthMapStart() {
 
 
 
-  unsigned int textureID;
-  glGenTextures(1, &textureID);
+  const char* diffusePath = "res/textures/container2.png";
+  const char* specularPath = "res/textures/container2_specular.png";
+  const char* emissionPath = "res/textures/matrix.jpg";
 
-  char const* path = "res/textures/container2.png";
-
-  int width, height, nrComponents;
-  unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-  if (data)
-  {
-    std::cout << "Width: " << width
-      << " Height: " << height
-      << " Channels: " << nrComponents
-      << std::endl;
-    GLenum format;
-    if (nrComponents == 1)
-      format = GL_RED;
-    else if (nrComponents == 3)
-      format = GL_RGB;
-    else if (nrComponents == 4)
-      format = GL_RGBA;
-
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    stbi_image_free(data);
-  }
-  else
-  {
-    std::cout << "Texture failed to load at path: " << path << std::endl;
-    stbi_image_free(data);
-  }
+  unsigned int diffuseMap = loadTexture(diffusePath);
+  unsigned int specularMap = loadTexture(specularPath);
+  unsigned int emissionMap = loadTexture(emissionPath);
 
 
 
@@ -205,28 +177,34 @@ void ligthMapStart() {
     lightSourceShader.setMat4("view",view);
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
+    model = glm::scale(model, glm::vec3(0.2f));
     lightSourceShader.setMat4("model", model);
     glBindVertexArray(LightVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     objectShader.use();
+    objectShader.setVec3("viewPos", camera.Position);
+    objectShader.setVec3("light.position", lightPos);
+    objectShader.setVec3("light.ambient", glm::vec3(1.0f));
+    objectShader.setVec3("light.diffuse", glm::vec3(0.8f));
+    objectShader.setVec3("light.specular", glm::vec3(1.0f));
+    objectShader.setInt("material.specular", 1);
+    objectShader.setInt("material.emmission", 2);
+    objectShader.setFloat("material.shininess", 32.0f);
+    objectShader.setInt("material.diffuse", 0);
+    objectShader.setMat4("view", view);
+    objectShader.setMat4("projection", projection);
     size_t count = sizeof(positions) / sizeof(positions[0]);
-    for (int i = 0; i < count; i++) {
-      objectShader.setVec3("viewPos", camera.Position);
-      objectShader.setVec3("light.position", lightPos);
-      objectShader.setVec3("light.ambient", glm::vec3(0.2f));
-      objectShader.setVec3("light.diffuse",glm::vec3(0.5f,0.5f,0.5f));
-      objectShader.setVec3("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
-      objectShader.setVec3("material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
-      objectShader.setFloat("material.shininess",64.0f);
-      objectShader.setInt("material.diffuse", 0);
+    for (int i = 0; i < count; i++) {     
       model = glm::mat4(1.0f);
       model = glm::translate(model, positions[i]);
       objectShader.setMat4("model", model);
-      objectShader.setMat4("view", view);
-      objectShader.setMat4("projection", projection);
       glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, textureID);
+      glBindTexture(GL_TEXTURE_2D, diffuseMap);
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, specularMap);
+      glActiveTexture(GL_TEXTURE2);
+      glBindTexture(GL_TEXTURE_2D,emissionMap);
       glBindVertexArray(VAO);
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
@@ -238,3 +216,5 @@ void ligthMapStart() {
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
+
+
