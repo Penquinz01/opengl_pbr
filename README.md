@@ -1,3 +1,4 @@
+
 # OpenGL PBR Learning Project
 
 A work-in-progress graphics programming project built in C++ using OpenGL and SDL3 while following the LearnOpenGL tutorial series. The goal of this project is to understand modern rendering techniques and eventually implement a Physically Based Rendering (PBR) pipeline.
@@ -79,6 +80,9 @@ Current Progress: **Lighting Maps**
 * [ ] Shadow mapping
 * [ ] HDR
 * [ ] PBR
+
+## Current Implementation
+<img width="395" height="295" alt="Screenshot 2026-06-25 173140" src="https://github.com/user-attachments/assets/5b9c54a1-a8f7-437b-9c8f-fc9a434351bf" />
 
 ## Building the Project
 
