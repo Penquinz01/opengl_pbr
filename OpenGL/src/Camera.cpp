@@ -67,6 +67,12 @@ void Camera::ProcessCameraMovement(float deltaTime)
   if (moveArray[RIGHT]) {
     Position += glm::normalize(glm::cross(Front, Up)) * cameraSpeed;
   }
+  if (moveArray[UP]) {
+    Position += cameraSpeed * Up;
+  }
+  if (moveArray[DOWN]) {
+    Position -= cameraSpeed * Up;
+  }
 }
 
 void Camera::ProcessKeyboardInput(SDL_Event event)
@@ -84,6 +90,12 @@ void Camera::ProcessKeyboardInput(SDL_Event event)
     if (event.key.scancode == SDL_SCANCODE_D) {
       moveArray[RIGHT] = 1;
     }
+    if (event.key.scancode == SDL_SCANCODE_SPACE) {
+      moveArray[UP] = 1;
+    }
+    if (event.key.scancode == SDL_SCANCODE_LCTRL) {
+      moveArray[DOWN] = 1;
+    }
   }
   if (event.type == SDL_EVENT_KEY_UP) {
     if (event.key.scancode == SDL_SCANCODE_W) {
@@ -97,6 +109,12 @@ void Camera::ProcessKeyboardInput(SDL_Event event)
     }
     if (event.key.scancode == SDL_SCANCODE_D) {
       moveArray[RIGHT] = 0;
+    }
+    if (event.key.scancode == SDL_SCANCODE_SPACE) {
+      moveArray[UP] = 0;
+    }
+    if (event.key.scancode == SDL_SCANCODE_LCTRL) {
+      moveArray[DOWN] = 0;
     }
   }
 }

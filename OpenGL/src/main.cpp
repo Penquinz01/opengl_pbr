@@ -1,6 +1,7 @@
-#include "Materials/Materials.h"
+//#include "Materials/Materials.h"
+#include "LightMap/Lightmap.h"
 
 int main() {
-  start();
+  ligthMapStart();
   return 1;
 }

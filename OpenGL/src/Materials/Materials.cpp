@@ -23,13 +23,13 @@ float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // timing
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
+//float deltaTime = 0.0f;
+//float lastFrame = 0.0f;
+//
+//// lighting
+//glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-// lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-
-float GetTime() {
+float GetTimeMat() {
   return (float)SDL_GetTicks() / 1000.0f;
 }
 
@@ -159,9 +159,9 @@ int start()
   {
     // per-frame time logic
     // --------------------
-    float currentFrame = static_cast<float>(GetTime());
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+    float currentFrame = static_cast<float>(GetTimeMat());
+  /*  deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;*/
 
     // input
     // -----
@@ -172,7 +172,7 @@ int start()
       }
       camera.ProcessInput(event);
     }
-    camera.ProcessCameraMovement(deltaTime);
+    //camera.ProcessCameraMovement(deltaTime);
 
     // render
     // ------
@@ -185,25 +185,25 @@ int start()
 
     // be sure to activate shader when setting uniforms/drawing objects
     lightingShader.use();
-    lightingShader.setVec3("light.position", lightPos);
+    //lightingShader.setVec3("light.position", lightPos);
     lightingShader.setVec3("viewPos", camera.Position);
 
     // light properties
     glm::vec3 lightColor;
-    lightColor.x = static_cast<float>(sin(GetTime() * 2.0));
-    lightColor.y = static_cast<float>(sin(GetTime() * 0.7));
-    lightColor.z = static_cast<float>(sin(GetTime() * 1.3));
-    glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // decrease the influence
-    glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // low influence
+    lightColor.x = static_cast<float>(sin(GetTimeMat() * 2.0));
+    lightColor.y = static_cast<float>(sin(GetTimeMat() * 0.7));
+    lightColor.z = static_cast<float>(sin(GetTimeMat() * 1.3));
+    glm::vec3 diffuseColor = lightColor * glm::vec3(1.0f); // decrease the influence
+    glm::vec3 ambientColor = diffuseColor * glm::vec3(1.0f); // low influence
     lightingShader.setVec3("light.ambient", ambientColor);
     lightingShader.setVec3("light.diffuse", diffuseColor);
     lightingShader.setVec3("light.specular", glm::vec3(1.0f,1.0f,1.0f));
 
     // material properties
-    lightingShader.setVec3("material.ambient", glm::vec3(1.0f, 0.5f, 0.31f));
-    lightingShader.setVec3("material.diffuse", glm::vec3(1.0f, 0.5f, 0.31f));
-    lightingShader.setVec3("material.specular", glm::vec3(0.5f, 0.5f, 0.5f)); // specular lighting doesn't have full effect on this object's material
-    lightingShader.setFloat("material.shininess", 32.0f);
+    lightingShader.setVec3("material.ambient", glm::vec3(0.05f, 0.0f, 0.0f));
+    lightingShader.setVec3("material.diffuse", glm::vec3(0.5f, 0.4f, 0.4f));
+    lightingShader.setVec3("material.specular", glm::vec3(0.7f, 0.04f, 0.04f)); // specular lighting doesn't have full effect on this object's material
+    lightingShader.setFloat("material.shininess", 0.078125 *32.0f);
 
     // view/projection transformations
     glm::mat4 projection = glm::perspective(glm::radians(camera.fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -222,10 +222,11 @@ int start()
 
     // also draw the lamp object
     lightCubeShader.use();
+    lightCubeShader.setVec3("lightColor", lightColor);
     lightCubeShader.setMat4("projection", projection);
     lightCubeShader.setMat4("view", view);
     model = glm::mat4(1.0f);
-    model = glm::translate(model, lightPos);
+    //model = glm::translate(model, lightPos);
     model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
     lightCubeShader.setMat4("model", model);
 
