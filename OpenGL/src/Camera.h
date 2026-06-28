@@ -35,4 +35,5 @@ private:
   void ProcessMouseMotion(SDL_Event event);
   void ProcessMouseWheel(SDL_Event event);
   void ProcessKeyboardInput(SDL_Event event);
+  void ProcessMouseInput(SDL_Event event);
 };

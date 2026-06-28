@@ -16,6 +16,7 @@ float lastFrame = 0.0f;
 
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightDir(-0.2f, -1.0f, -0.3f);
 float vertices[] = {
   // positions          // normals           // texture coords
   -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
@@ -64,7 +65,9 @@ float vertices[] = {
 glm::vec3 positions[] = {
   glm::vec3(0.0f,0.0f,0.0f),
   glm::vec3(1.7f,2.5f,3.0f),
-  glm::vec3(5.0f,3.0f,3.0f)
+  glm::vec3(5.0f,3.0f,3.0f),
+  glm::vec3(-1.0f,0.3f,-4.0f),
+  glm::vec3(-2.3f,-2.3f,-1.0f)
 };
 
 float GetTime() {
@@ -188,6 +191,9 @@ void ligthMapStart() {
     objectShader.setVec3("light.ambient", glm::vec3(1.0f));
     objectShader.setVec3("light.diffuse", glm::vec3(0.8f));
     objectShader.setVec3("light.specular", glm::vec3(1.0f));
+    objectShader.setFloat("light.constant", 1.0f);
+    objectShader.setFloat("light.linear", 0.09f);
+    objectShader.setFloat("light.quadratic", 0.032f);
     objectShader.setInt("material.specular", 1);
     objectShader.setInt("material.emmission", 2);
     objectShader.setFloat("material.shininess", 32.0f);
@@ -195,18 +201,20 @@ void ligthMapStart() {
     objectShader.setMat4("view", view);
     objectShader.setMat4("projection", projection);
     size_t count = sizeof(positions) / sizeof(positions[0]);
-    for (int i = 0; i < count; i++) {     
-      model = glm::mat4(1.0f);
-      model = glm::translate(model, positions[i]);
-      objectShader.setMat4("model", model);
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, diffuseMap);
-      glActiveTexture(GL_TEXTURE1);
-      glBindTexture(GL_TEXTURE_2D, specularMap);
-      glActiveTexture(GL_TEXTURE2);
-      glBindTexture(GL_TEXTURE_2D,emissionMap);
-      glBindVertexArray(VAO);
-      glDrawArrays(GL_TRIANGLES, 0, 36);
+    for (int i = 0; i < count; i++) {  
+        float angle =GetTime()*20.0f * i;
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, positions[i]);
+        model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+        objectShader.setMat4("model", model);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularMap);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D,emissionMap);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     SDL_GL_SwapWindow(window);
 
