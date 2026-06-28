@@ -107,7 +107,7 @@ void ligthMapStart() {
   Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
   Shader lightSourceShader("shaders/Materials/3.1.light_cube.vs", "shaders/Materials/3.1.light_cube.fs");
-  Shader objectShader("shaders/LightMaps/lightMap.vert", "shaders/LightMaps/lightMap.frag");
+  Shader objectShader("shaders/LightMaps/lightMap.vert", "shaders/LightMaps/spotlight.frag");
 
 
 
@@ -187,13 +187,16 @@ void ligthMapStart() {
 
     objectShader.use();
     objectShader.setVec3("viewPos", camera.Position);
-    objectShader.setVec3("light.position", lightPos);
-    objectShader.setVec3("light.ambient", glm::vec3(1.0f));
+    objectShader.setVec3("light.position", camera.Position);
+    objectShader.setVec3("light.ambient", glm::vec3(0.2f));
     objectShader.setVec3("light.diffuse", glm::vec3(0.8f));
     objectShader.setVec3("light.specular", glm::vec3(1.0f));
     objectShader.setFloat("light.constant", 1.0f);
     objectShader.setFloat("light.linear", 0.09f);
     objectShader.setFloat("light.quadratic", 0.032f);
+    objectShader.setVec3("light.direction", camera.Front);
+    objectShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+    objectShader.setFloat("light.outerCutOff", glm::cos(glm::radians(15.0f)));
     objectShader.setInt("material.specular", 1);
     objectShader.setInt("material.emmission", 2);
     objectShader.setFloat("material.shininess", 32.0f);
