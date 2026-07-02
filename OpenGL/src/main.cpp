@@ -1,7 +1,8 @@
 //#include "Materials/Materials.h"
 #include "LightMap/Lightmap.h"
+#include "Model Loading/ModelLoading.h"
 
 int main() {
-  ligthMapStart();
+    startModelLoading();
   return 1;
 }

@@ -8,12 +8,13 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "File.h"
+#include "stbimage.h"
 
 
 class Model
 {
 public:
-    Model(char* path) {
+    Model(const char* path) {
         loadModel(path);
     }
     void Draw(Shader& shader);
@@ -27,5 +28,7 @@ private:
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
 
     Assimp::Importer importer;
+    std::vector<Texture> textures_loaded;
+    unsigned int TextureFromFile(const char* path, const std::string& directory);
 };
 
