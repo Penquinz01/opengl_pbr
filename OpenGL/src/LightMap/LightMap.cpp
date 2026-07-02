@@ -10,6 +10,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stbimage.h"
 #include "../File.h"
+#include "assimp/config.h"
 
 SDL_Window* window;
 float deltaTime = 0.0f;
