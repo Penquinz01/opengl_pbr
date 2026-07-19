@@ -1,14 +1,16 @@
-#include "ModelLoading.h"
+#include "Stencil.h"
 
-#include "../Common.h"
 
 #include "../Model/Model.h"
 
 
+glm::vec3 newPos(5.0f,5.0f,5.0f);
 
+unsigned int VBO, VAO, LightVAO;
+int width, height;
+unsigned int diffuseMap, specularMap, emissionMap;
 
-
-void startModelLoading() {
+void StartStencilTest() {
     std::string modelPath = "res/models/backpack/backpack.obj";
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cout << "SDL Cant be initialized" << std::endl;
@@ -42,7 +44,8 @@ void startModelLoading() {
 
     Shader lightSourceShader("shaders/Materials/3.1.light_cube.vs", "shaders/Materials/3.1.light_cube.fs");
     Shader objectShader("shaders/LightMaps/lightMap.vert", "shaders/LightMaps/multipleLight.frag");
-    Shader modelShader("shaders/BackPack/backpack.vert","shaders/BackPack/backpack.frag");
+    Shader modelShader("shaders/BackPack/backpack.vert", "shaders/BackPack/backpack.frag");
+    Shader outLineShader("shaders/Outline/Outline.vert","shaders/Outline/Outline.frag");
 
 
 
@@ -51,9 +54,9 @@ void startModelLoading() {
     const char* specularPath = "res/textures/container2_specular.png";
     const char* emissionPath = "res/textures/matrix.jpg";
 
-    unsigned int diffuseMap = loadTexture(diffusePath);
-    unsigned int specularMap = loadTexture(specularPath);
-    unsigned int emissionMap = loadTexture(emissionPath);
+    diffuseMap = loadTexture(diffusePath);
+    specularMap = loadTexture(specularPath);
+    emissionMap = loadTexture(emissionPath);
 
     Model backPack(modelPath.c_str());
 
@@ -62,7 +65,7 @@ void startModelLoading() {
 
 
 
-    unsigned int VBO, VAO, LightVAO;
+    
 
     glGenVertexArrays(1, &VAO);
 
@@ -92,6 +95,7 @@ void startModelLoading() {
     bool isRunning = true;
     SDL_Event event;
     while (isRunning) {
+
         float currentFrame = GetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -106,16 +110,19 @@ void startModelLoading() {
             camera.ProcessInput(event);
         }
 
-        int width, height;
+        width, height;
         SDL_GetWindowSize(window, &width, &height);
         glViewport(0, 0, width, height);
         camera.ProcessCameraMovement(deltaTime);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.fov),(float)width/ height, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.fov), (float)width / height, 0.1f, 100.0f);
 
+        glStencilMask(0x00);
         lightSourceShader.use();
         for (int i = 0; i < 4; i++) {
             lightSourceShader.setVec3("lightColor", ambients[i]);
@@ -191,22 +198,38 @@ void startModelLoading() {
         modelShader.setMat4("model", model);
         modelShader.setVec3("light.position", lightPos);
         modelShader.setVec3("light.ambient", glm::vec3(0.2f));
-        modelShader.setVec3("light.diffuse", glm::vec3(0.8f,0.4f,0.6f));
-        modelShader.setVec3("light.specular",glm::vec3(1.0f));
-        modelShader.setFloat("light.contant",1.0f);
-        modelShader.setFloat("light.linear",0.22f);
-        modelShader.setFloat("light.quadratic",0.20f);
-        modelShader.setVec3("spotlight.position",camera.Position);
-        modelShader.setVec3("spotlight.direction",camera.Front);
+        modelShader.setVec3("light.diffuse", glm::vec3(0.8f, 0.4f, 0.6f));
+        modelShader.setVec3("light.specular", glm::vec3(1.0f));
+        modelShader.setFloat("light.contant", 1.0f);
+        modelShader.setFloat("light.linear", 0.22f);
+        modelShader.setFloat("light.quadratic", 0.20f);
+        modelShader.setVec3("spotlight.position", camera.Position);
+        modelShader.setVec3("spotlight.direction", camera.Front);
         modelShader.setFloat("spotlight.cutOff", glm::cos(glm::radians(12.5f)));
-        modelShader.setFloat("spotlight.outerCutOff",glm::cos(glm::radians(20.0f)));
-        modelShader.setFloat("spotlight.constant",1.0f);
-        modelShader.setFloat("spotlight.linear",0.22f);
-        modelShader.setFloat("spotLight.quadratic",0.20f);
-        modelShader.setVec3("spotlight.ambient",glm::vec3(0.2f));
-        modelShader.setVec3("spotlight.diffuse",glm::vec3(0.8f));
-        modelShader.setVec3("spotlight.specular",glm::vec3(1.0f));
+        modelShader.setFloat("spotlight.outerCutOff", glm::cos(glm::radians(20.0f)));
+        modelShader.setFloat("spotlight.constant", 1.0f);
+        modelShader.setFloat("spotlight.linear", 0.22f);
+        modelShader.setFloat("spotLight.quadratic", 0.20f);
+        modelShader.setVec3("spotlight.ambient", glm::vec3(0.2f));
+        modelShader.setVec3("spotlight.diffuse", glm::vec3(0.8f));
+        modelShader.setVec3("spotlight.specular", glm::vec3(1.0f));
         backPack.Draw(modelShader);
+
+
+        glStencilFunc(GL_ALWAYS,1,0xFF);
+        glStencilMask(0xFF);
+        objectShader.use();
+        DrawCube(camera,objectShader);
+
+        glStencilFunc(GL_NOTEQUAL,1,0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+        outLineShader.use();
+        DrawScaledUpCube(camera,outLineShader);
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS,1,0xFF);
+        glEnable(GL_DEPTH_TEST);
+
 
         SDL_GL_SwapWindow(window);
 
@@ -216,6 +239,71 @@ void startModelLoading() {
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
+
+void DrawCube(Camera camera,Shader objectShader) {
+    glm::mat4 view = camera.GetViewMatrix();
+    glm::mat4 projection = glm::perspective(glm::radians(camera.fov), (float)width / height, 0.1f, 100.0f);
+    objectShader.setVec3("viewPos", camera.Position);
+    objectShader.setVec3("dirLight.direction", lightDir);
+    objectShader.setVec3("dirLight.ambient", glm::vec3(0.2f));
+    objectShader.setVec3("dirLight.diffuse", glm::vec3(0.8f));
+    objectShader.setVec3("dirLight.specular", glm::vec3(1.0f));
+    for (int i = 0; i < 4; i++) {
+        std::string number = std::to_string(i);
+        objectShader.setVec3("pointLights[" + number + "].position", pointLightPositions[i]);
+        objectShader.setVec3("pointLights[" + number + "].ambient", ambients[i]);
+        objectShader.setVec3("pointLights[" + number + "].diffuse", diffuse[i]);
+        objectShader.setVec3("pointLights[" + number + "].specular", specular[i]);
+        objectShader.setFloat("pointLights[" + number + "].constant", 1.0f);
+        objectShader.setFloat("pointLights[" + number + "].linear", 0.07f);
+        objectShader.setFloat("pointLights[" + number + "].quadratic", 0.017f);
+    }
+    objectShader.setVec3("spotLight.position", camera.Position);
+    objectShader.setVec3("spotLight.direction", camera.Front);
+    objectShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+    objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(20.0f)));
+    objectShader.setVec3("spotLight.ambient", glm::vec3(0.2f, 0.0f, 0.0f));
+    objectShader.setVec3("spotLight.diffuse", glm::vec3(0.8f, 0.0f, 0.0f));
+    objectShader.setVec3("spotLight.specular", glm::vec3(1.0f, 0.0f, 0.0f));
+    objectShader.setFloat("spotLight.constant", 1.0f);
+    objectShader.setFloat("spotLight.linear", 0.22f);
+    objectShader.setFloat("spotLight.quadratic", 0.20f);
+
+
+    objectShader.setInt("material.specular", 1);
+    objectShader.setInt("material.emmission", 2);
+    objectShader.setFloat("material.shininess", 32.0f);
+    objectShader.setInt("material.diffuse", 0);
+    objectShader.setMat4("view", view);
+    objectShader.setMat4("projection", projection);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, newPos);
+    objectShader.setMat4("model", model);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, emissionMap);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void DrawScaledUpCube(Camera camera,Shader shaderSingleColor) {
+    glm::mat4 view = camera.GetViewMatrix();
+    glm::mat4 projection = glm::perspective(glm::radians(camera.fov), (float)width / height, 0.1f, 100.0f);
+    float scale = 1.1f;
+    // cubes
+    glBindVertexArray(VAO);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, newPos);
+    model = glm::scale(model, glm::vec3(scale, scale, scale));
+    shaderSingleColor.setMat4("model", model);
+    shaderSingleColor.setMat4("view", view);
+    shaderSingleColor.setMat4("projection",projection);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
 
 
 

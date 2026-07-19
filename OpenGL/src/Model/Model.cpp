@@ -15,6 +15,8 @@ unsigned int Model::TextureFromFile(const char* path, const std::string& directo
         GLenum format;
         if (nrComponents == 1)
             format = GL_RED;
+        else if(nrComponents == 2)
+            format = GL_RG;
         else if (nrComponents == 3)
             format = GL_RGB;
         else if (nrComponents == 4)
@@ -71,6 +73,8 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
+    vertices.reserve(mesh->mNumVertices);
+    indices.reserve(mesh->mNumFaces * 3);
 
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
         Vertex vertex;
