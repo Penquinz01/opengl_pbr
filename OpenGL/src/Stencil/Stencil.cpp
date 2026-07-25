@@ -94,14 +94,8 @@ void StartStencilTest() {
     glCullFace(GL_FRONT);
     glFrontFace(GL_CCW);
 
-    unsigned int fbo;
-    glGenBuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   
 
-
-
-    
 
     glGenVertexArrays(1, &VAO);
 
@@ -117,7 +111,7 @@ void StartStencilTest() {
     glEnableVertexAttribArray(0);
 
     //Normals
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     //TexCoords
